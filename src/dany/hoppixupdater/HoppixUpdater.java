@@ -22,12 +22,11 @@ import dany.hoppixupdater.Variables.State;
 
 public class HoppixUpdater implements Runnable
 {
-	public static final String software_version = "2.0";
+	public static final String software_version = "2.0-TFC";
 	
 	private static final HoppixUpdater instance = new HoppixUpdater();
 	private String[] args;
 	
-	private String version_updater_new;
 	private String version_forge_old;
 	private String version_forge_new;
 	private String version_build_old;
@@ -66,9 +65,6 @@ public class HoppixUpdater implements Runnable
 				if (forgeversion.exists())
 					forgeversion.delete();
 				File buildversion = new File("buildversion.txt");
-				if (buildversion.exists())
-					buildversion.delete();
-				File updaterversion = new File("updaterversion.txt");
 				if (buildversion.exists())
 					buildversion.delete();
 				File tokenvalid = new File("token.tmp");
