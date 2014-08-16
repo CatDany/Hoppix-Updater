@@ -3,7 +3,6 @@ package dany.hoppixupdater;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -13,13 +12,17 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
+
 import net.lingala.zip4j.core.ZipFile;
 
 import com.google.common.base.Charsets;
 
-public class HoppixUpdater
+import dany.hoppixupdater.Variables.State;
+
+public class HoppixUpdater implements Runnable
 {
-	public static final String software_version = "1.8";
+	public static final String software_version = "2.0";
 	
 	private static final HoppixUpdater instance = new HoppixUpdater();
 	private String[] args;
@@ -32,14 +35,27 @@ public class HoppixUpdater
 	
 	private String token;
 	
+	private GuiFrame frame;
+	
 	public static void main(String[] args)
+	{
+		instance().args = args;
+		instance().version_forge_old = "?";
+		instance().version_build_old = "?";
+		new Thread(instance()).start();
+	}
+	
+	public static HoppixUpdater instance()
+	{
+		return instance;
+	}
+	
+	@Override
+	public void run()
 	{
 		try
 		{
-			instance().args = args;
-			instance().version_forge_old = "?";
-			instance().version_build_old = "?";
-			instance().run();
+			runProgram();
 		}
 		catch (Throwable t)
 		{
@@ -64,29 +80,25 @@ public class HoppixUpdater
 		System.exit(-1);
 	}
 	
-	public static HoppixUpdater instance()
+	public void runProgram() throws Throwable
 	{
-		return instance;
-	}
-	
-	public void run() throws Throwable
-	{
+		this.frame = new GuiFrame();
+		
 		System.out.println("Welcome to Hoppix-Updater v" + software_version);
 		System.out.println("###################");
 		System.out.println("# Author: CatDany #");
 		System.out.println("###################");
 		System.out.println("");
 		
-		if (args.length < 1 || args[0] == null)
+		if ((token = readToken()) == null)
 		{
-			System.out.println("You are using wrong run command! Use this:");
-			System.out.println("java -jar Hoppix-Updater-" + software_version + ".jar --token=$YOUR_TOKEN$");
-			System.in.read();
-			System.exit(-1);
+			token = JOptionPane.showInputDialog(new OPFrame(), "Enter your token here", null);
+			writeToken(token);
 		}
 		
 		System.out.println("Checking access..");
-		if (isTokenValid(args[0].substring(8)))
+		Variables.state = State.CHECKING_ACCESS;
+		if (isTokenValid(token))
 		{
 			System.out.println("Access is allowed!");
 			System.out.println("");
@@ -95,14 +107,12 @@ public class HoppixUpdater
 		{
 			System.out.println("Access is denied!");
 			System.out.println("You are using wrong or outdated token.");
-			System.in.read();
+			writeToken(null);
+			JOptionPane.showMessageDialog(new OPFrame(), "You are using wrong or outdated token!", "Error", JOptionPane.ERROR_MESSAGE);
 			System.exit(-1);
 		}
 		
-		if (clearOlderVersions())
-		{
-			System.out.println("Older versions of Hoppix-Updater were deleted.");
-		}
+		Variables.state = State.SETTING_UP;
 		
 		System.out.println("Checking Hoppix-Updater for updates..");
 		String updaterVersion = getUpdaterVersion();
@@ -111,14 +121,12 @@ public class HoppixUpdater
 			System.out.println("Hoppix-Updater is outdated!");
 			System.out.println("Latest Hoppix-Updater version: " + updaterVersion);
 			System.out.println("Downloading latest version..");
+			Variables.state = State.DOWNLOADING_UPDATER;
 			downloadUpdater(updaterVersion);
-			System.out.println("Hoppix-Updater is downloaded successfully. Changing BAT-file..");
-			changeBatchFile(updaterVersion, token);
-			System.out.println("BAT-file changed!");
 			System.out.println("Hoppix-Updater is updated successfully!");
 			System.out.println("");
-			System.out.println("Close this application and start 'run.bat' again!");
-			System.in.read();
+			System.out.println("Close this application and start it again!");
+			JOptionPane.showMessageDialog(new OPFrame(), "Restart Hoppix-Updater to continue.", "Hoppix-Updater self-updated", JOptionPane.INFORMATION_MESSAGE);
 			System.exit(-1);
 		}
 		else
@@ -136,9 +144,17 @@ public class HoppixUpdater
 		System.out.println("Required modpack build version: " + buildVersion);
 		System.out.println("");
 		
+		String mcversion = forgeVersion.split("-")[0];
+		if (!isVanillaVersionExisting(mcversion))
+		{
+			JOptionPane.showMessageDialog(new OPFrame(), "Run vanilla " + mcversion + " at least once before installing Hoppix modpack!", "Warning", JOptionPane.WARNING_MESSAGE);
+			System.exit(-1);
+		}
+		
 		if (isForgeUpdated())
 		{
 			System.out.println("Forge is outdated! Downloading required version..");
+			Variables.state = State.DOWNLOADING_FORGE;
 			downloadForge(forgeVersion);
 			System.out.println("Forge is successfully downloaded.");
 			System.out.println("");
@@ -153,11 +169,12 @@ public class HoppixUpdater
 		if (isBuildUpdated())
 		{
 			System.out.println("Modpack is outdated! Downloading required version..");
+			Variables.state = State.DOWNLOADING_FORGE;
 			downloadBuild(buildVersion);
 			if (isBuildFileValid() != null)
 			{
 				System.out.println("Build file is corrupted. Reason: " + isBuildFileValid().getErrorName() + "!");
-				System.in.read();
+				JOptionPane.showMessageDialog(new OPFrame(), "Build file is corrupted. Reason: " + isBuildFileValid().getErrorName() + "!", "Error", JOptionPane.ERROR_MESSAGE);
 				System.exit(-1);
 			}
 			System.out.println("Modpack is downloaded successfully. Unzipping..");
@@ -174,6 +191,7 @@ public class HoppixUpdater
 		if (!isLauncherExisting())
 		{
 			System.out.println("Downloading launcher..");
+			Variables.state = State.DOWNLOADING_LAUNCHER;
 			downloadLauncher();
 			System.out.println("Launcher is downloaded successfully!");
 		}
@@ -181,12 +199,13 @@ public class HoppixUpdater
 		if (isBuildUpdated())
 		{
 			System.out.println("Changes in build " + version_build_new + ":");
+			String changesInOneLine = "";
 			for (String i : getLatestChanges())
 			{
 				System.out.println(i);
+				changesInOneLine += i + "\n";
 			}
-			System.out.println("Press Enter to start Minecraft.");
-			System.in.read();
+			JOptionPane.showMessageDialog(new OPFrame(), "Hoppix Modpack updated. Latest changes:\n" + changesInOneLine, "Done", JOptionPane.INFORMATION_MESSAGE);
 			System.out.println("Starting Minecraft..");
 		}
 		else
@@ -373,40 +392,9 @@ public class HoppixUpdater
 		String mcurl = "http://files.hoppix.ru/updater/Hoppix-Updater-" + version + ".jar";
 		URL website = new URL(mcurl);
 		ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-		FileOutputStream fos = new FileOutputStream("Hoppix-Updater-" + version + ".jar");
+		FileOutputStream fos = new FileOutputStream("Hoppix-Updater.jar");
 		fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 		fos.close();
-	}
-	
-	public void changeBatchFile(String version, String token) throws Throwable
-	{
-		File batch = new File("run.bat");
-		if (batch.exists())
-		{
-			batch.delete();
-		}
-		batch.createNewFile();
-		PrintWriter bw = new PrintWriter(batch);
-		bw.println("@echo off");
-		// bw.println("java -jar Hoppix-Updater-" + version + ".jar");
-		bw.println("java -jar Hoppix-Updater-" + version + ".jar --token=" + token);
-		bw.println("exit");
-		bw.close();
-	}
-	
-	public boolean clearOlderVersions() throws Throwable
-	{
-		File[] files = new File(".").listFiles();
-		boolean clearing = false;
-		for (File i : files)
-		{
-			if (i.exists() && i.getName().startsWith("Hoppix-Updater-") && i.getName().endsWith(".jar") && !i.getName().equals("Hoppix-Updater-" + software_version + ".jar") && !i.getName().endsWith("BIN.jar"))
-			{
-				i.delete();
-				clearing = true;
-			}
-		}
-		return clearing;
 	}
 	
 	public List<String> getLatestChanges() throws Throwable
@@ -447,6 +435,43 @@ public class HoppixUpdater
 		new File("token.tmp").delete();
 		this.token = token;
 		return isTokenValid;
+	}
+	
+	public String readToken() throws Throwable
+	{
+		File file = new File("token.txt");
+		if (file.exists())
+		{
+			String t = Files.readAllLines(file.toPath(), Charsets.ISO_8859_1).get(0);
+			if (t.matches("^[a-zA-Z0-9]{16}$") && t.length() == 16)
+			{
+				return t;
+			}
+		}
+		return null;
+	}
+	
+	public void writeToken(String token) throws Throwable
+	{
+		File file = new File("token.txt");
+		if (!file.exists())
+		{
+			file.createNewFile();
+		}
+		if (token == null)
+		{
+			file.delete();
+			return;
+		}
+		PrintWriter bw = new PrintWriter(file);
+		bw.println(token);
+		bw.close();
+	}
+	
+	public boolean isVanillaVersionExisting(String mcversion) throws Throwable
+	{
+		File file = new File(System.getenv("APPDATA") + "\\.minecraft\\versions\\" + mcversion + "\\" + mcversion + ".jar");
+		return file.exists();
 	}
 	
 	/**
