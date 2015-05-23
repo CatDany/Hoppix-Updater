@@ -1,6 +1,8 @@
 .git
 .settings
+token.txt
 bin
+out
 config
 config_backup
 Flan
@@ -22,3 +24,6 @@ Minecraft.exe
 options.txt
 #run.bat
 run_.bat
+.metadata
+build_38.zip
+forge-installer.jar.log

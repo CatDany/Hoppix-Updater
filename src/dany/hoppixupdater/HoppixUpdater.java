@@ -14,6 +14,8 @@ import java.util.List;
 
 import javax.swing.JOptionPane;
 
+import org.apache.commons.io.FileUtils;
+
 import net.lingala.zip4j.core.ZipFile;
 
 import com.google.common.base.Charsets;
@@ -169,7 +171,7 @@ public class HoppixUpdater implements Runnable
 		if (isBuildUpdated())
 		{
 			System.out.println("Modpack is outdated! Downloading required version..");
-			Variables.state = State.DOWNLOADING_FORGE;
+			Variables.state = State.DOWNLOADING_MODPACK;
 			downloadBuild(buildVersion);
 			if (isBuildFileValid() != null)
 			{
@@ -285,6 +287,7 @@ public class HoppixUpdater implements Runnable
 		*/
 		
 		// http://files.minecraftforge.net/maven/net/minecraftforge/forge/1.7.2-10.12.2.1126/forge-1.7.2-10.12.2.1126-installer.jar
+		// http://files.minecraftforge.net/maven/net/minecraftforge/forge/1.7.10-10.13.3.1384-1.7.10/forge-1.7.10-10.13.3.1384-1.7.10-installer.jar
 		String forgeurl = "http://files.minecraftforge.net/maven/net/minecraftforge/forge/"
 				+ version + "/forge-" + version + "-installer.jar";
 		URL website = new URL(forgeurl);
@@ -320,9 +323,9 @@ public class HoppixUpdater implements Runnable
 		File modsBackupDir = new File("mods_backup");
 		
 		if (configBackupDir.exists())
-			configBackupDir.delete();
+			FileUtils.deleteDirectory(configBackupDir);
 		if (modsBackupDir.exists())
-			modsBackupDir.delete();
+			FileUtils.deleteDirectory(modsBackupDir);
 		
 		File configDir = new File("config");
 		File modsDir = new File("mods");
