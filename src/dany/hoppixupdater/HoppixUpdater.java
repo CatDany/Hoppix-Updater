@@ -24,7 +24,7 @@ import dany.hoppixupdater.Variables.State;
 
 public class HoppixUpdater implements Runnable
 {
-	public static final String software_version = "2.0";
+	public static final String software_version = "2.1";
 	
 	private static final HoppixUpdater instance = new HoppixUpdater();
 	private String[] args;
