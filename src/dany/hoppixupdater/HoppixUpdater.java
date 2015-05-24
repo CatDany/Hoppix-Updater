@@ -1,8 +1,10 @@
 package dany.hoppixupdater;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -14,9 +16,9 @@ import java.util.List;
 
 import javax.swing.JOptionPane;
 
-import org.apache.commons.io.FileUtils;
-
 import net.lingala.zip4j.core.ZipFile;
+
+import org.apache.commons.io.FileUtils;
 
 import com.google.common.base.Charsets;
 
@@ -24,7 +26,9 @@ import dany.hoppixupdater.Variables.State;
 
 public class HoppixUpdater implements Runnable
 {
-	public static final String software_version = "2.1";
+	public static final String software_version = "2.2";
+	public static final double JAVA_VERSION_REQUIRED = 1.8;
+	public static final int JAVA_BUILD_REQUIRED = 40;
 	
 	private static final HoppixUpdater instance = new HoppixUpdater();
 	private String[] args;
@@ -91,6 +95,13 @@ public class HoppixUpdater implements Runnable
 		System.out.println("# Author: CatDany #");
 		System.out.println("###################");
 		System.out.println("");
+		
+		if (!verifyJavaVersion())
+		{
+			JOptionPane.showMessageDialog(new OPFrame(), "Your Java version is unsupported.\nUpdate to the latest Java 8 64-bit.", "Unsupported JRE", JOptionPane.ERROR_MESSAGE);
+			Desktop.getDesktop().browse(new URI("https://www.java.com/ru/download/manual.jsp"));
+			System.exit(-1);
+		}
 		
 		if ((token = readToken()) == null)
 		{
@@ -475,6 +486,14 @@ public class HoppixUpdater implements Runnable
 	{
 		File file = new File(System.getenv("APPDATA") + "\\.minecraft\\versions\\" + mcversion + "\\" + mcversion + ".jar");
 		return file.exists();
+	}
+	
+	public boolean verifyJavaVersion()
+	{
+		String version = System.getProperty("java.version");
+		double ver = Double.parseDouble(version.substring(0, 3));
+		int build = Integer.parseInt(version.substring(6));
+		return ver == JAVA_VERSION_REQUIRED && build >= JAVA_BUILD_REQUIRED;
 	}
 	
 	/**
