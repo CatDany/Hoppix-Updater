@@ -26,7 +26,7 @@ import dany.hoppixupdater.Variables.State;
 
 public class HoppixUpdater implements Runnable
 {
-	public static final String software_version = "2.2";
+	public static final String software_version = "2.4";
 	public static final double JAVA_VERSION_REQUIRED = 1.8;
 	public static final int JAVA_BUILD_REQUIRED = 40;
 	
@@ -484,12 +484,20 @@ public class HoppixUpdater implements Runnable
 	
 	public boolean isVanillaVersionExisting(String mcversion) throws Throwable
 	{
+		if (!System.getProperty("os.name").startsWith("Windows"))
+		{
+			return true;
+		}
 		File file = new File(System.getenv("APPDATA") + "\\.minecraft\\versions\\" + mcversion + "\\" + mcversion + ".jar");
 		return file.exists();
 	}
 	
 	public boolean verifyJavaVersion()
 	{
+		if (!System.getProperty("os.name").startsWith("Windows"))
+		{
+			return true;
+		}
 		String version = System.getProperty("java.version");
 		double ver = Double.parseDouble(version.substring(0, 3));
 		int build = Integer.parseInt(version.substring(6));
